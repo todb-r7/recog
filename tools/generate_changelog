@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+
+$stdout.sync = true
+tags = `git tag -l`.split(/[\r\n]+/)
+tag_versions = tags.map { |tag| tag.scan(/^v(\d+\.\d+\.\d+)$/) }.flatten.map { |v| Gem::Version.new(v) }.sort.reverse
+fail 'No versions found in `git tag`' if tag_versions.empty?
+revisions = tag_versions.map { |tv| "v#{tv}" }
+revisions << `git rev-list --max-parents=0 HEAD`.split(/[\r\n]+/).first
+revisions.each_index do |ri|
+  break if ri >= revisions.size - 1
+  from = revisions[ri+1]
+  to = revisions[ri]
+  change_header = "Changes from #{from} to #{to}"
+  puts change_header
+  puts '#' * change_header.size
+  puts
+  puts '```'
+  puts `git shortlog "#{from}...#{to}"`.strip
+  puts '```'
+  puts if ri + 2 < revisions.size
+end
+
